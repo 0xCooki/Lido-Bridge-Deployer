@@ -4,3 +4,6 @@
 [submodule "lib/lido-l2-with-steth"]
 	path = lib/lido-l2-with-steth
 	url = https://github.com/0xCooki/lido-l2-with-steth
+[submodule "lib/governance-crosschain-bridges"]
+	path = lib/governance-crosschain-bridges
+	url = https://github.com/aave/governance-crosschain-bridges
