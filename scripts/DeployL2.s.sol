@@ -3,6 +3,13 @@ pragma solidity 0.8.25;
 
 import "forge-std/Script.sol";
 
+/*
+- wstETHERC20BridgePermit proxy / impl
+- stETHERC20RebasableBridgePermit proxy / impl
+- Token Rate Oracle proxy / impl
+- L2ERC20ExtendedTokensBridge proxy / impl
+- Op Gov Bridge executor
+*/
 contract DeployL2 is Script {
     function run() external broadcast {
 
