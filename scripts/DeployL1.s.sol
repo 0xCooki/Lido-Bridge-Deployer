@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.10;
 
 import "forge-std/Script.sol";
 
@@ -51,7 +51,7 @@ contract DeployL1 is Script {
         l1BridgeImpl = new L1LidoTokensBridge(optimismMessenger, l2TokenBridge, l1TokenNonRebasable, lidoCore, l2TokenNonRebasable, l2TokenRebasable, accountingOracle);
 
         /// Bridge proxy
-        l1BridgeProxy = new OssifiableProxy(address(l1Bridge), owner, "");
+        l1BridgeProxy = new OssifiableProxy(address(l1BridgeImpl), owner, "");
     }
 
     /// HELPERS ///
@@ -63,7 +63,7 @@ contract DeployL1 is Script {
         vm.stopBroadcast();
     }
 
-    function _getPredictedAddressess() internal returns (address) {
+    function _getPredictedAddressess() internal returns (address, address, address, address) {
         /// token rate oracle
         /// l2TokenBridge
         /// l2TokenNonRebasable

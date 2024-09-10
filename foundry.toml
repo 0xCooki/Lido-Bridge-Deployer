@@ -1,5 +1,5 @@
 [profile.default]
-solc-version = "0.8.24"
+solc-version = "0.8.10"
 evm_version = "cancun"
 libs = ['lib']
 optimizer = true
@@ -11,7 +11,7 @@ gas_reports = [
 ]
 
 remappings = [
-    "@openzeppelin/=lib/openzeppelin-contracts/contracts",
+    "@openzeppelin/=lib/openzeppelin-contracts/",
     "@lido/=lib/lido-l2-with-steth/contracts",
     "@bridge/=lib/governance-crosschain-bridges/contracts",
     "@script/=scripts"

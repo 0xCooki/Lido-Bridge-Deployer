@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.10;
 
 import "forge-std/Script.sol";
 
 import {OssifiableProxy} from "@lido/proxy/OssifiableProxy.sol";
 import {ERC20BridgedPermit} from "@lido/token/ERC20BridgedPermit.sol";
+import {ERC20RebasableBridgedPermit} from "@lido/token/ERC20RebasableBridgedPermit.sol";
+import {TokenRateOracle} from "@lido/optimism/TokenRateOracle.sol";
+import {L2ERC20ExtendedTokensBridge} from "@lido/optimism/L2ERC20ExtendedTokensBridge.sol";
 
 /*
 - wstETHERC20BridgePermit proxy / impl
@@ -36,11 +39,9 @@ contract DeployL2 is Script {
         */
 
         /// wstETH impl
-        wstETHImpl = new ERC20BridgedPermit();
+        //wstETHImpl = new ERC20BridgedPermit();
 
         /// wstETH proxy
-
-        
     }
 
     modifier broadcast() {
