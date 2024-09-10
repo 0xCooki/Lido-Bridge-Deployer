@@ -8,11 +8,6 @@ import {OpStackTokenRatePusher} from "@lido/optimism/OpStackTokenRatePusher.sol"
 import {L1LidoTokensBridge} from "@lido/optimism/L1LidoTokensBridge.sol";
 import {OssifiableProxy} from "@lido/proxy/OssifiableProxy.sol";
 
-/*
-- Rate Notifier - this seems to hook directly into Lido core
-- Token Rate Pusher 
-- Bridge proxy / impl
-*/
 contract DeployL1 is Script {
     /// Rate notifier
     address public owner = 0x42e84F0bCe28696cF1D254F93DfDeaeEB6F0D67d;
@@ -47,10 +42,8 @@ contract DeployL1 is Script {
         /// Rate pusher
         pusher = new OpStackTokenRatePusher(optimismMessenger, wstETH, accountingOracle, tokenRateOracle, gaslimitForPushing);
 
-        /// Bridge impl
+        /// Bridge Impl and Proxy
         l1BridgeImpl = new L1LidoTokensBridge(optimismMessenger, l2TokenBridge, l1TokenNonRebasable, lidoCore, l2TokenNonRebasable, l2TokenRebasable, accountingOracle);
-
-        /// Bridge proxy
         l1BridgeProxy = new OssifiableProxy(address(l1BridgeImpl), owner, "");
     }
 
@@ -64,7 +57,7 @@ contract DeployL1 is Script {
     }
 
     function _getPredictedAddressess() internal returns (address, address, address, address) {
-        /// token rate oracle
+        /// token rate oracle on L2
         /// l2TokenBridge
         /// l2TokenNonRebasable
         /// l2TokenRebasable

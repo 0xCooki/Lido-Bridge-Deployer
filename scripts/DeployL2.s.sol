@@ -8,46 +8,94 @@ import {ERC20BridgedPermit} from "@lido/token/ERC20BridgedPermit.sol";
 import {ERC20RebasableBridgedPermit} from "@lido/token/ERC20RebasableBridgedPermit.sol";
 import {TokenRateOracle} from "@lido/optimism/TokenRateOracle.sol";
 import {L2ERC20ExtendedTokensBridge} from "@lido/optimism/L2ERC20ExtendedTokensBridge.sol";
+import {OptimismBridgeExecutor} from "@bridge/bridges/OptimismBridgeExecutor.sol";
 
-/*
-- wstETHERC20BridgePermit proxy / impl
-- stETHERC20RebasableBridgePermit proxy / impl
-- Token Rate Oracle proxy / impl
-- L2ERC20ExtendedTokensBridge proxy / impl
-- Op Gov Bridge executor
-*/
 contract DeployL2 is Script {
-    address public optimismMessenger = 0x13931872294360cAc551BA3801f061c4C86F0725;
+    address public owner = 0x42e84F0bCe28696cF1D254F93DfDeaeEB6F0D67d;
+
+    /// wstETH
+    address l2ERC20ExtendedTokensBridgeOnL2 = address(0); /// Proxy L2ERC20ExtendedTokensBridge on l2 
+
+    /// stETH
+    address tokenToWrapFrom; /// address(wstETHProxy)
+    address tokenRateOracle; /// address(oracleProxy)
+    address bridge; /// = l2ERC20ExtendedTokensBridgeOnL2 
+
+    /// Oracle
+    address messenger = 0x4200000000000000000000000000000000000007;
+    //address l2ERC20TokenBridge; /// l2ERC20ExtendedTokensBridgeOnL2
+    address l1TokenRatePusher = address(0); /// L1 rate pusher address
+    uint256 tokenRateOutdatedDelay = 86400;
+    uint256 maxAllowedL2ToL1ClockLag = 172800;
+    uint256 maxAllowedTokenRateDeviationPerDayBp = 500;
+    uint256 oldestRateAllowedInPauseTimeSpan = 86400;
+    uint256 minTimeBetweenTokenRateUpdates = 3600;
+
+    /// Bridge
+    //address messenger;
+    address l1TokenBridge = address(0); /// corresponding L1 bridge
+    address l1TokenNonRebasable; /// l1 wsteth
+    address l1TokenRebasable; /// l1 steth
+    address l2TokenNonRebasable; /// l2 wsteth proxy
+    address l2TokenRebasable; /// l2 steth proxy
+
+    /// Executor
+    /// address ovmL2CrossDomainMessenger; messenger
+    /// address ethereumGovernanceExecutor; owner
+    uint256 delay = 0; // The delay before which an actions set can be executed
+    uint256 gracePeriod = 86400; // The time period after a delay during which an actions set can be executed
+    uint256 minimumDelay = 0; //The minimum bound a delay can be set to
+    uint256 maximumDelay = 1; //The maximum bound a delay can be set to
+    address guardian; /// can be address(0)
 
     ERC20BridgedPermit public wstETHImpl;
     OssifiableProxy public wstETHProxy;
 
+    ERC20RebasableBridgedPermit public stETHImpl;
+    OssifiableProxy public stETHProxy;
+
+    TokenRateOracle public oracleImpl;
+    OssifiableProxy public oracleProxy;
+
+    L2ERC20ExtendedTokensBridge public bridgeImpl;
+    OssifiableProxy public bridgeProxy;
+
+    OptimismBridgeExecutor public bridgeExecutor;
+
+    /// @dev Assuming the proxies don't need any calldata
     function run() external broadcast {
-        /*
-        /// @param messenger_ L2 messenger address being used for cross-chain communications
-        /// @param l2ERC20TokenBridge_ the bridge address that has a right to updates oracle.
-        /// @param l1TokenRatePusher_ An address of account on L1 that can update token rate.
-        /// @param tokenRateOutdatedDelay_ time period when token rate can be considered outdated.
-        /// @param maxAllowedL2ToL1ClockLag_ A time difference between received l1Timestamp and L2 block.timestamp
-        ///         when token rate can be considered outdated.
-        /// @param maxAllowedTokenRateDeviationPerDayBp_ Allowed token rate deviation per day in basic points.
-        ///        Can't be bigger than BASIS_POINT_SCALE.
-        /// @param oldestRateAllowedInPauseTimeSpan_ Maximum allowed time difference between the current time
-        ///        and the last received token rate update that can be set during a pause.
-        /// @param minTimeBetweenTokenRateUpdates_ Minimum delta time between two
-        ///        L1 timestamps of token rate updates.
-        */
+        /// Get predicted addresses
 
-        /// wstETH impl
-        //wstETHImpl = new ERC20BridgedPermit();
+        wstETHImpl = new ERC20BridgedPermit("wstETH", "WSTETH", "0", 18, l2ERC20ExtendedTokensBridgeOnL2);
+        wstETHProxy = new OssifiableProxy(address(wstETHImpl), owner, "");
 
-        /// wstETH proxy
+        stETHImpl = new ERC20RebasableBridgedPermit("stETH", "STETH", "0", 18, address(wstETHProxy), tokenRateOracle, l2ERC20ExtendedTokensBridgeOnL2);
+        stETHProxy = new OssifiableProxy(address(stETHImpl), owner, "");
+
+        oracleImpl = new TokenRateOracle(messenger, l2ERC20ExtendedTokensBridgeOnL2, l1TokenRatePusher, tokenRateOutdatedDelay, maxAllowedL2ToL1ClockLag, maxAllowedTokenRateDeviationPerDayBp, oldestRateAllowedInPauseTimeSpan, minTimeBetweenTokenRateUpdates);
+        oracleProxy = new OssifiableProxy(address(oracleImpl), owner, "");
+
+        bridgeImpl = new L2ERC20ExtendedTokensBridge(messenger, l1TokenBridge, l1TokenNonRebasable, l1TokenRebasable, address(wstETHProxy), address(stETHProxy));
+        bridgeProxy = new OssifiableProxy(address(bridgeImpl), owner, "");
+
+        bridgeExecutor = new OptimismBridgeExecutor(messenger, owner, delay, gracePeriod, minimumDelay, maximumDelay, guardian);
     }
+
+    /// HELPERS ///
 
     modifier broadcast() {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         _;
         vm.stopBroadcast();
+    }
+
+    function _getPredictedAddressess() internal returns (address, address, address, address) {
+        /// bridge proxy on L2
+        /// L1 rate pusher
+        /// L1 bridge
+        /// wsteh proxy
+        /// steth proxy
+        
     }
 }
