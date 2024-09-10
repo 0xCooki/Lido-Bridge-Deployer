@@ -13,5 +13,6 @@ gas_reports = [
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/contracts",
     "@lido/=lib/lido-l2-with-steth/contracts",
-    "@bridge/=lib/governance-crosschain-bridges/contracts"
+    "@bridge/=lib/governance-crosschain-bridges/contracts",
+    "@script/=scripts"
 ]
