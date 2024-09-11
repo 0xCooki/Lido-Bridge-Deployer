@@ -6,8 +6,8 @@ import {DeployL2} from "@script/DeployL2.s.sol";
 
 contract DeployL2Test is TestUtils {
     address public deployer = 0xa2ef4A5fB028b4543700AC83e87a0B8b4572202e;
-    uint256 public l1Nonce = 21;
-    uint256 public l2Nonce = 0;
+    uint256 public l1Nonce = 25;
+    uint256 public l2Nonce = 9;
 
     DeployL2 public deployL2;
 
