@@ -7,8 +7,9 @@ import {TokenRateNotifier} from "@lido/lido/TokenRateNotifier.sol";
 import {OpStackTokenRatePusher} from "@lido/optimism/OpStackTokenRatePusher.sol";
 import {L1LidoTokensBridge} from "@lido/optimism/L1LidoTokensBridge.sol";
 import {OssifiableProxy} from "@lido/proxy/OssifiableProxy.sol";
+import {Address} from "./Address.sol";
 
-contract DeployL1 is Script {
+contract DeployL1 is Script, Address {
     /// Rate notifier
     address public owner = 0x42e84F0bCe28696cF1D254F93DfDeaeEB6F0D67d;
     address public lidoCore = 0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af; /// @dev steth
@@ -35,16 +36,24 @@ contract DeployL1 is Script {
 
     function run() external broadcast {
         /// Get predicted addresses
+        (, address predictedOracle,, address predictedWstETH,, address predictedStETH,, address predictedBridge,) = _getL2PredictedAddressess(0xa2ef4A5fB028b4543700AC83e87a0B8b4572202e, 0);
 
         /// Rate notifier
         notifier = new TokenRateNotifier(owner, lidoCore);
 
         /// Rate pusher
-        pusher = new OpStackTokenRatePusher(optimismMessenger, wstETH, accountingOracle, tokenRateOracle, gaslimitForPushing);
+        pusher = new OpStackTokenRatePusher(optimismMessenger, wstETH, accountingOracle, predictedOracle, gaslimitForPushing);
 
         /// Bridge Impl and Proxy
-        l1BridgeImpl = new L1LidoTokensBridge(optimismMessenger, l2TokenBridge, l1TokenNonRebasable, lidoCore, l2TokenNonRebasable, l2TokenRebasable, accountingOracle);
-        l1BridgeProxy = new OssifiableProxy(address(l1BridgeImpl), owner, "");
+        l1BridgeImpl = new L1LidoTokensBridge(optimismMessenger, predictedBridge, l1TokenNonRebasable, lidoCore, predictedWstETH, predictedStETH, accountingOracle);
+        l1BridgeProxy = new OssifiableProxy(
+            address(l1BridgeImpl), 
+            owner, 
+            abi.encodeWithSelector(
+                bytes4(keccak256("initialize(address)")),
+                owner
+            )
+        );
     }
 
     /// HELPERS ///
@@ -56,10 +65,15 @@ contract DeployL1 is Script {
         vm.stopBroadcast();
     }
 
-    function _getPredictedAddressess() internal returns (address, address, address, address) {
-        /// token rate oracle on L2
-        /// l2TokenBridge
-        /// l2TokenNonRebasable
-        /// l2TokenRebasable
+    function _getL2PredictedAddressess(address _sender, uint256 _nonce) internal returns (address a, address b, address c, address d, address e, address f, address g, address h, address i) {
+        a = _addressFrom(_sender, _nonce);
+        b = _addressFrom(_sender, _nonce + 1);
+        c = _addressFrom(_sender, _nonce + 2);
+        d = _addressFrom(_sender, _nonce + 3);
+        e = _addressFrom(_sender, _nonce + 4);
+        f = _addressFrom(_sender, _nonce + 5);
+        g = _addressFrom(_sender, _nonce + 6);
+        h = _addressFrom(_sender, _nonce + 7);
+        i = _addressFrom(_sender, _nonce + 8);
     }
 }

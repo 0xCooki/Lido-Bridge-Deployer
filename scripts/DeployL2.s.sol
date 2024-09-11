@@ -9,17 +9,10 @@ import {ERC20RebasableBridgedPermit} from "@lido/token/ERC20RebasableBridgedPerm
 import {TokenRateOracle} from "@lido/optimism/TokenRateOracle.sol";
 import {L2ERC20ExtendedTokensBridge} from "@lido/optimism/L2ERC20ExtendedTokensBridge.sol";
 import {OptimismBridgeExecutor} from "@bridge/bridges/OptimismBridgeExecutor.sol";
+import {Address} from "./Address.sol";
 
-contract DeployL2 is Script {
+contract DeployL2 is Script, Address {
     address public owner = 0x42e84F0bCe28696cF1D254F93DfDeaeEB6F0D67d;
-
-    /// wstETH
-    address l2ERC20ExtendedTokensBridgeOnL2 = address(0); /// Proxy L2ERC20ExtendedTokensBridge on l2 
-
-    /// stETH
-    address tokenToWrapFrom; /// address(wstETHProxy)
-    address tokenRateOracle; /// address(oracleProxy)
-    address bridge; /// = l2ERC20ExtendedTokensBridgeOnL2 
 
     /// Oracle
     address messenger = 0x4200000000000000000000000000000000000007;
@@ -31,11 +24,22 @@ contract DeployL2 is Script {
     uint256 oldestRateAllowedInPauseTimeSpan = 86400;
     uint256 minTimeBetweenTokenRateUpdates = 3600;
 
+    uint256 tokenRate = 1000368694572477596 * 10 ** 9;
+    //uint256 rateUpdatedL1Timestamp = 
+
+    /// wstETH
+    address l2ERC20ExtendedTokensBridgeOnL2 = address(0); /// Proxy L2ERC20ExtendedTokensBridge on l2 
+
+    /// stETH
+    address tokenToWrapFrom; /// address(wstETHProxy)
+    address tokenRateOracle; /// address(oracleProxy)
+    //address l2ERC20ExtendedTokensBridgeOnL2; /// = l2ERC20ExtendedTokensBridgeOnL2 
+
     /// Bridge
     //address messenger;
     address l1TokenBridge = address(0); /// corresponding L1 bridge
-    address l1TokenNonRebasable; /// l1 wsteth
-    address l1TokenRebasable; /// l1 steth
+    address l1TokenNonRebasable = 0xB82381A3fBD3FaFA77B3a7bE693342618240067b; /// l1 wsteth
+    address l1TokenRebasable = 0x3e3FE7dBc6B4C189E7128855dD526361c49b40Af; /// l1 steth
     address l2TokenNonRebasable; /// l2 wsteth proxy
     address l2TokenRebasable; /// l2 steth proxy
 
@@ -48,35 +52,70 @@ contract DeployL2 is Script {
     uint256 maximumDelay = 1; //The maximum bound a delay can be set to
     address guardian; /// can be address(0)
 
+    TokenRateOracle public oracleImpl;
+    OssifiableProxy public oracleProxy;
+
     ERC20BridgedPermit public wstETHImpl;
     OssifiableProxy public wstETHProxy;
 
     ERC20RebasableBridgedPermit public stETHImpl;
     OssifiableProxy public stETHProxy;
 
-    TokenRateOracle public oracleImpl;
-    OssifiableProxy public oracleProxy;
-
     L2ERC20ExtendedTokensBridge public bridgeImpl;
     OssifiableProxy public bridgeProxy;
 
     OptimismBridgeExecutor public bridgeExecutor;
 
-    /// @dev Assuming the proxies don't need any calldata
     function run() external broadcast {
         /// Get predicted addresses
+        (, address predictedL1Pusher,, address predictedL1Bridge) = _getL1PredictedAddressess(0xa2ef4A5fB028b4543700AC83e87a0B8b4572202e, 21);
+        (, address predictedOracle,, address predictedWstETH,, address predictedStETH,, address predictedL2Bridge,) = _getL2PredictedAddressess(0xa2ef4A5fB028b4543700AC83e87a0B8b4572202e, 0);
 
-        wstETHImpl = new ERC20BridgedPermit("wstETH", "WSTETH", "0", 18, l2ERC20ExtendedTokensBridgeOnL2);
-        wstETHProxy = new OssifiableProxy(address(wstETHImpl), owner, "");
+        oracleImpl = new TokenRateOracle(messenger, predictedL2Bridge,  predictedL1Pusher, tokenRateOutdatedDelay, maxAllowedL2ToL1ClockLag, maxAllowedTokenRateDeviationPerDayBp, oldestRateAllowedInPauseTimeSpan, minTimeBetweenTokenRateUpdates);
+        oracleProxy = new OssifiableProxy(
+            address(oracleImpl),
+            owner,
+            abi.encodeWithSelector(
+                bytes4(keccak256("initialize(address,uint256,uint256)")),
+                owner,
+                tokenRate,
+                block.timestamp
+            )
+        );
 
-        stETHImpl = new ERC20RebasableBridgedPermit("stETH", "STETH", "0", 18, address(wstETHProxy), tokenRateOracle, l2ERC20ExtendedTokensBridgeOnL2);
-        stETHProxy = new OssifiableProxy(address(stETHImpl), owner, "");
+        wstETHImpl = new ERC20BridgedPermit("wstETH", "WSTETH", "0", 18, predictedL2Bridge);
+        wstETHProxy = new OssifiableProxy(
+            address(wstETHImpl),
+            owner,
+            abi.encodeWithSelector(
+                bytes4(keccak256("initialize(string,string,string)")),
+                "wstETH",
+                "WSTETH",
+                "0"
+            )
+        );
 
-        oracleImpl = new TokenRateOracle(messenger, l2ERC20ExtendedTokensBridgeOnL2, l1TokenRatePusher, tokenRateOutdatedDelay, maxAllowedL2ToL1ClockLag, maxAllowedTokenRateDeviationPerDayBp, oldestRateAllowedInPauseTimeSpan, minTimeBetweenTokenRateUpdates);
-        oracleProxy = new OssifiableProxy(address(oracleImpl), owner, "");
+        stETHImpl = new ERC20RebasableBridgedPermit("stETH", "STETH", "0", 18, address(wstETHProxy), predictedOracle, predictedL2Bridge);
+        stETHProxy = new OssifiableProxy(
+            address(stETHImpl),
+            owner,
+            abi.encodeWithSelector(
+                bytes4(keccak256("initialize(string,string,string)")),
+                "stETH",
+                "STETH",
+                "0"
+            )
+        );
 
-        bridgeImpl = new L2ERC20ExtendedTokensBridge(messenger, l1TokenBridge, l1TokenNonRebasable, l1TokenRebasable, address(wstETHProxy), address(stETHProxy));
-        bridgeProxy = new OssifiableProxy(address(bridgeImpl), owner, "");
+        bridgeImpl = new L2ERC20ExtendedTokensBridge(messenger, predictedL1Bridge, l1TokenNonRebasable, l1TokenRebasable, address(wstETHProxy), address(stETHProxy));
+        bridgeProxy = new OssifiableProxy(
+            address(bridgeImpl),
+            owner,
+            abi.encodeWithSelector(
+                bytes4(keccak256("initialize(address)")),
+                owner
+            )
+        );
 
         bridgeExecutor = new OptimismBridgeExecutor(messenger, owner, delay, gracePeriod, minimumDelay, maximumDelay, guardian);
     }
@@ -90,12 +129,22 @@ contract DeployL2 is Script {
         vm.stopBroadcast();
     }
 
-    function _getPredictedAddressess() internal returns (address, address, address, address) {
-        /// bridge proxy on L2
-        /// L1 rate pusher
-        /// L1 bridge
-        /// wsteh proxy
-        /// steth proxy
-        
+    function _getL1PredictedAddressess(address _sender, uint256 _nonce) internal returns (address a, address b, address c, address d) {
+        a = _addressFrom(_sender, _nonce);
+        b = _addressFrom(_sender, _nonce + 1);
+        c = _addressFrom(_sender, _nonce + 2);
+        d = _addressFrom(_sender, _nonce + 3);
+    }
+
+    function _getL2PredictedAddressess(address _sender, uint256 _nonce) internal returns (address a, address b, address c, address d, address e, address f, address g, address h, address i) {
+        a = _addressFrom(_sender, _nonce);
+        b = _addressFrom(_sender, _nonce + 1);
+        c = _addressFrom(_sender, _nonce + 2);
+        d = _addressFrom(_sender, _nonce + 3);
+        e = _addressFrom(_sender, _nonce + 4);
+        f = _addressFrom(_sender, _nonce + 5);
+        g = _addressFrom(_sender, _nonce + 6);
+        h = _addressFrom(_sender, _nonce + 7);
+        i = _addressFrom(_sender, _nonce + 8);
     }
 }
